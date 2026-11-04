@@ -83,8 +83,7 @@ const mIn=saturate(new THREE.MeshStandardMaterial({map:V[1].in,roughness:.9,meta
 function setVar(n){mOut.map=V[n].out;mIn.map=V[n].in;mOut.needsUpdate=mIn.needsUpdate=true;
   for(const k of [1,2,3]) document.getElementById('v'+k).style.background=k===n?'#FFDD2D':'#fff';}
 for(const n of [1,2,3])document.getElementById('v'+n).onclick=()=>setVar(n);
-const requestedVariant=Number(new URLSearchParams(location.search).get('v'));
-setVar(V[requestedVariant]?requestedVariant:1);
+setVar(1);
 const mEdge=new THREE.MeshStandardMaterial({color:EDGE,roughness:.95});
 
 /* четырёхугольник: углы в мм ↔ углы на развёртке в пикселях (a,b,c,d по кругу) */
@@ -159,7 +158,6 @@ document.getElementById('view').onclick=()=>{topView=!topView;stopAuto();
   document.getElementById('view').textContent=topView?'Вид сбоку':'Вид сверху';if(topView&&!target)bOpen.click()};
 function stopAuto(){ctl.autoRotate=false;document.getElementById('hint').style.opacity=0}
 renderer.domElement.addEventListener('pointerdown',stopAuto);
-if(location.search.includes('open')){target=ang=1;bOpen.textContent='Закрыть'}
 
 function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}
 addEventListener('resize',resize);resize();
