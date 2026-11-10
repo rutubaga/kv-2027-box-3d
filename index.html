@@ -23,7 +23,7 @@
 <body>
 <div class="load" id="load">Загружаю модель…</div>
 <div class="hint" id="hint">Покрутите коробку</div>
-<div class="ui"><button id="open">Открыть</button><button class="g" id="view">Вид сверху</button></div>
+<div class="ui"><button class="g" id="p1">Крупный паттерн</button><button class="g" id="p2">Мелкий паттерн</button><button id="open">Открыть</button><button class="g" id="view">Вид сверху</button></div>
 <script type="module">
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
@@ -67,17 +67,22 @@ ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
 
 let ready=0;
 const tl=new THREE.TextureLoader();
-const tex=u=>{const t=tl.load(u,()=>{if(++ready>=2)document.getElementById('load')?.remove()});t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t};
+const tex=u=>{const t=tl.load(u,()=>{if(++ready>=3)document.getElementById('load')?.remove()});t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t};
 /* насыщенность печати: усиливаем цвет текстуры в шейдере */
 const SAT=1.35;
 const saturate=m=>{m.onBeforeCompile=s=>{s.fragmentShader=s.fragmentShader.replace('#include <map_fragment>',
   `#include <map_fragment>
   float l=dot(diffuseColor.rgb,vec3(.2126,.7152,.0722));
   diffuseColor.rgb=clamp(mix(vec3(l),diffuseColor.rgb,${SAT.toFixed(2)}),0.,1.);`)};return m};
-/* снаружи 3275:12680 (без паттерна в карманах), внутри 3259:26481 */
-const V={out:tex('outer3.jpg?rev=f740fcd3f861'),in:tex('inner3.jpg?rev=d8615fdfdaca')};
-const mOut=saturate(new THREE.MeshStandardMaterial({map:V.out,roughness:.85,metalness:0}));
-const mIn=saturate(new THREE.MeshStandardMaterial({map:V.in,roughness:.9,metalness:0}));
+/* снаружи 3275:12680 (без паттерна в карманах); внутри: 1 — 3259:26481 крупный паттерн, 2 — 3330:14677 мелкий паттерн 60% */
+const OUT=tex('outer3.jpg?rev=f740fcd3f861');
+const INN={1:tex('inner3.jpg?rev=d8615fdfdaca'),2:tex('inner4.jpg?rev=0b3c7cb7ab87')};
+const mOut=saturate(new THREE.MeshStandardMaterial({map:OUT,roughness:.85,metalness:0}));
+const mIn=saturate(new THREE.MeshStandardMaterial({map:INN[1],roughness:.9,metalness:0}));
+function setPat(n){mIn.map=INN[n];mIn.needsUpdate=true;
+  for(const k of [1,2]) document.getElementById('p'+k).style.background=k===n?'#FFDD2D':'#fff';}
+for(const n of [1,2]) document.getElementById('p'+n).onclick=()=>setPat(n);
+setPat(1);
 const mEdge=new THREE.MeshStandardMaterial({color:EDGE,roughness:.95});
 
 /* четырёхугольник: углы в мм ↔ углы на развёртке в пикселях (a,b,c,d по кругу) */
