@@ -23,7 +23,7 @@
 <body>
 <div class="load" id="load">Загружаю модель…</div>
 <div class="hint" id="hint">Покрутите коробку</div>
-<div class="ui"><button class="g" id="v1">Вариант 1</button><button class="g" id="v2">Вариант 2</button><button class="g" id="v3" title="Без паттерна в карманах">Вариант 3</button><button id="open">Открыть</button><button class="g" id="view">Вид сверху</button></div>
+<div class="ui"><button id="open">Открыть</button><button class="g" id="view">Вид сверху</button></div>
 <script type="module">
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
@@ -67,23 +67,17 @@ ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
 
 let ready=0;
 const tl=new THREE.TextureLoader();
-const tex=u=>{const t=tl.load(u,()=>{if(++ready>=6)document.getElementById('load')?.remove()});t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t};
+const tex=u=>{const t=tl.load(u,()=>{if(++ready>=2)document.getElementById('load')?.remove()});t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t};
 /* насыщенность печати: усиливаем цвет текстуры в шейдере */
 const SAT=1.35;
 const saturate=m=>{m.onBeforeCompile=s=>{s.fragmentShader=s.fragmentShader.replace('#include <map_fragment>',
   `#include <map_fragment>
   float l=dot(diffuseColor.rgb,vec3(.2126,.7152,.0722));
   diffuseColor.rgb=clamp(mix(vec3(l),diffuseColor.rgb,${SAT.toFixed(2)}),0.,1.);`)};return m};
-/* 1 — карман со щитом; 2 — карманы с паттерном; 3 — карманы без паттерна.
-   Внутри: 1 — 3139:32266; 2 — 3283:12593 с вязкой; 3 — 3259:26481 с однотонным карманом. */
-const sharedInner=tex('inner2.jpg?rev=482747892862');
-const V={1:{out:tex('outer.jpg?rev=852eed9b880d'),in:tex('inner.jpg?rev=b36a03098437')},2:{out:tex('outer2.jpg?rev=b63c11f356d7'),in:sharedInner},3:{out:tex('outer3.jpg?rev=1958ddcb72c8'),in:tex('inner3.jpg?rev=4cdb57d2d983')}};
-const mOut=saturate(new THREE.MeshStandardMaterial({map:V[1].out,roughness:.85,metalness:0}));
-const mIn=saturate(new THREE.MeshStandardMaterial({map:V[1].in,roughness:.9,metalness:0}));
-function setVar(n){mOut.map=V[n].out;mIn.map=V[n].in;mOut.needsUpdate=mIn.needsUpdate=true;
-  for(const k of [1,2,3]) document.getElementById('v'+k).style.background=k===n?'#FFDD2D':'#fff';}
-for(const n of [1,2,3])document.getElementById('v'+n).onclick=()=>setVar(n);
-setVar(1);
+/* снаружи 3275:12680 (без паттерна в карманах), внутри 3259:26481 */
+const V={out:tex('outer3.jpg?rev=f740fcd3f861'),in:tex('inner3.jpg?rev=d8615fdfdaca')};
+const mOut=saturate(new THREE.MeshStandardMaterial({map:V.out,roughness:.85,metalness:0}));
+const mIn=saturate(new THREE.MeshStandardMaterial({map:V.in,roughness:.9,metalness:0}));
 const mEdge=new THREE.MeshStandardMaterial({color:EDGE,roughness:.95});
 
 /* четырёхугольник: углы в мм ↔ углы на развёртке в пикселях (a,b,c,d по кругу) */
