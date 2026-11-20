@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Наклейки на устройство</title>
+<style>
+  /* Сравнение раскладки наклеек: 1 — фасад отдельно + лента на 4 стенки, 2 — крест одним куском. Размеры по ТЗ, мм. */
+  :root{--bg:#F3F2EE;--ink:#111;--mut:#6b6a66;--card:#fff;--line:rgba(0,0,0,.1)}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font:400 15px/1.45 "Inter Tight",system-ui,sans-serif}
+  html,body{height:100%}
+  .stage{position:relative;height:100%;min-height:380px}
+  canvas{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
+  .tags{position:absolute;inset:16px 16px auto;display:flex;justify-content:space-around;pointer-events:none}
+  .tags b{font-weight:600;font-size:15px;background:#fff;padding:6px 12px;border-radius:99px;box-shadow:0 0 0 1px var(--line)}
+  .ui{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:8px;flex-wrap:wrap;justify-content:center;width:max-content;max-width:calc(100% - 32px)}
+  .ui button{height:38px;padding:0 16px;border:0;border-radius:99px;background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);font:500 14px "Inter Tight",system-ui,sans-serif;cursor:pointer}
+  .ui button.on{background:var(--ink);color:#fff;box-shadow:none}
+  .copy{position:absolute;top:60px;left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:6px;width:calc(100% - 32px);max-width:720px}
+  .copy button{white-space:nowrap;height:32px;padding:0 12px;border:0;border-radius:99px;background:#fff;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);font:500 13px "Inter Tight",system-ui,sans-serif;cursor:pointer}
+  .vnote{position:absolute;left:50%;transform:translateX(-50%);top:142px;font:500 13px "Inter Tight",system-ui,sans-serif;color:#555;white-space:nowrap}
+  .copy button.on{background:#FFDD2D;box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
+  .nets{display:grid;grid-template-columns:1fr;gap:16px;padding:16px;max-width:720px;margin:0 auto}
+  .card{background:var(--card);border-radius:16px;padding:20px;box-shadow:0 0 0 1px var(--line)}
+  .card h2{font-size:18px;font-weight:600;margin-bottom:4px}
+  .card p{color:var(--mut);font-size:14px}
+  .card svg{width:100%;height:auto;display:block;margin:14px 0 10px}
+  .card ul{list-style:none;font-size:14px;display:grid;gap:4px}
+  .card li::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;background:var(--c)}
+  @media (max-width:760px){.nets{grid-template-columns:1fr}}
+</style>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.165.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.165.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div class="stage">
+  <div class="tags"><b>Фасад + лента</b></div>
+  <div class="ui">
+    <button data-v="r" class="on">3/4 справа</button>
+    <button data-v="l">3/4 слева</button>
+    <button data-v="t">Сверху</button>
+    <button data-v="f">Фасад</button>
+  </div>
+  <div class="copy"><button data-dv="0" class="on">Вариант 1 · надпись 1</button><button data-dv="1">Вариант 1 · надпись 2</button><button data-dv="2">Вариант «трек»</button><button data-dv="3">Цвет коробки</button></div>
+  <div class="vnote" id="vnote">Надпись — на левой боковой стенке</div>
+</div>
+
+<div class="nets" style="display:none">
+  <div class="card">
+    <h2>Фасад отдельно + стенки одной лентой</h2>
+    <p>2 наклейки. Лента огибает все 4 угла корпуса, начинается с правой стенки (вырезы под кнопку и USB-C точно на месте), стык один — в правом нижнем углу.</p>
+    <svg viewBox="0 0 520 260" role="img" aria-label="Развёртка: фасад и лента">
+      <rect x="10" y="10" width="110" height="129" fill="#FFDD2D" stroke="#BA7517" stroke-width=".8"/>
+      <rect x="22.9" y="23" width="84.2" height="84.5" fill="#F6F6F3" stroke="#BA7517" stroke-width=".6"/>
+      <g fill="#F6F6F3"><circle cx="15.5" cy="15.5" r="2.35"/><circle cx="114.5" cy="15.5" r="2.35"/><circle cx="15.5" cy="133.5" r="2.35"/><circle cx="114.5" cy="133.5" r="2.35"/></g>
+      <g fill="#3a3000"><line x1="22.9" y1="115.5" x2="107.1" y2="115.5" stroke="rgba(58,48,0,.35)" stroke-width=".5"/><line x1="22.9" y1="115.5" x2="51.5" y2="115.5" stroke="#3a3000" stroke-width=".5"/><circle cx="51.5" cy="115.5" r=".9"/><rect x="63.9" y="123.3" width=".7" height="2.4"/><rect x="65.4" y="123.3" width=".7" height="2.4"/><path d="M54.6 123.3v2.4l-1.9-1.2zM75.4 123.3v2.4l1.9-1.2z"/></g>
+      <text x="65" y="155" font-size="11" text-anchor="middle" fill="#6b6a66">фасад 109 × 128</text>
+      <rect x="10" y="180" width="479" height="52.3" fill="#FFDD2D" stroke="#BA7517" stroke-width=".8"/>
+      <g stroke="#854F0B" stroke-width=".8" stroke-dasharray="4 3"><line x1="139.2" y1="180" x2="139.2" y2="232.3"/><line x1="249.4" y1="180" x2="249.4" y2="232.3"/><line x1="378.6" y1="180" x2="378.6" y2="232.3"/></g>
+      <rect x="89.9" y="199.7" width="11.4" height="6.8" rx="3.4" fill="#F6F6F3"/>
+      <rect x="58.4" y="200" width="10.3" height="5.4" rx="2" fill="#F6F6F3"/>
+      <g fill="#1a1a1a" text-anchor="middle"><text x="314" y="203.9" font-size="6" font-family="TSansCond">В 2027 с Т-Банком</text><text x="314" y="213.5" font-size="8.4" font-family="TSansBold">Новый год уже слышно</text></g>
+      <g stroke="#E24B4A" stroke-width="3"><line x1="10" y1="180" x2="10" y2="232.3"/><line x1="488.8" y1="180" x2="488.8" y2="232.3"/></g>
+      <g font-size="11" fill="#6b6a66" text-anchor="middle"><text x="74.6" y="248">правая · старт</text><text x="194.3" y="248">верх</text><text x="314" y="248">левая · копирайт</text><text x="433.7" y="248">низ</text></g>
+    </svg>
+    <ul>
+      <li style="--c:#F6F6F3;box-shadow:none">Белое — тонкий кант по краю фасада, около 0,5 мм</li>
+      <li style="--c:#E24B4A">Один стык ленты в правом нижнем углу: начало и конец ленты</li>
+      <li style="--c:#2a9d5c">Фасадная пластина снимается, наклейку резать не надо</li>
+    </ul>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
+
+const stage=document.querySelector('.stage');
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+stage.prepend(renderer.domElement);
+
+const scene=new THREE.Scene();scene.background=new THREE.Color(0xF3F2EE);
+scene.environment=new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(),.04).texture;scene.environmentIntensity=.35;
+const cam=new THREE.PerspectiveCamera(26,1,5,20000);
+const ctl=new OrbitControls(cam,renderer.domElement);
+ctl.enableDamping=true;ctl.enablePan=false;ctl.minDistance=250;ctl.maxDistance=1200;ctl.target.set(0,0,26);
+
+const key=new THREE.DirectionalLight(0xffffff,1.1);key.position.set(-300,380,560);
+key.castShadow=true;key.shadow.mapSize.set(2048,2048);key.shadow.radius=6;key.shadow.bias=-.0005;
+Object.assign(key.shadow.camera,{left:-300,right:300,top:300,bottom:-300,near:50,far:2000});
+scene.add(key,new THREE.HemisphereLight(0xffffff,0xdedbd2,.75));
+
+/* размеры по ТЗ: фасадная пластина 110×129, корпус 110,2×129,2, глубина 52,3 */
+const DW=110, DL=129, BW=110.2, BL=129.2, DH=52.3, PL=3;
+const wx0=-DW/2+12.9, wx1=DW/2-12.9, wyT=DL/2-13, wyB=wyT-84.5, wcy=(wyT+wyB)/2;
+const R=2.1, off=3.4+R, screws=[[-1,-1],[1,-1],[-1,1],[1,1]].map(([a,b])=>[a*(DW/2-off),b*(DL/2-off)]);
+const by=BL/2-48.4-5.2, bz=26.9+2.9, uy=-BL/2+48.9+4.65, uz=27.9+2.2;   // кнопка и USB-C, от тыла
+const GROW=.5;                                                       // вырезы шире отверстий на 0,5 на сторону
+
+const mDev=new THREE.MeshStandardMaterial({color:0xF6F6F3,roughness:.5});
+const mWin=new THREE.MeshStandardMaterial({color:0x3a3a3c,roughness:.12,metalness:.1});
+const mDark=new THREE.MeshStandardMaterial({color:0x2b2b2b,roughness:.5});
+const mMetal=new THREE.MeshStandardMaterial({color:0xb9b9b9,roughness:.3,metalness:.85});
+const mRing=new THREE.MeshStandardMaterial({color:0xFFD27A,emissive:0xFFB830,emissiveIntensity:.9,roughness:.4});
+const mStk=new THREE.MeshStandardMaterial({color:0xFFDD2D,roughness:.42,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2});
+
+const rect=(x0,y0,x1,y1,P=THREE.Shape)=>{const s=new P();s.moveTo(x0,y0);s.lineTo(x1,y0);s.lineTo(x1,y1);s.lineTo(x0,y1);s.closePath();return s};
+const pill=(cx,cy,w,h,P=THREE.Path,rr)=>{const p=new P(),r=rr??Math.min(w,h)/2,a=w/2-r,b=h/2-r;
+  p.moveTo(cx+a+r,cy-b);p.lineTo(cx+a+r,cy+b);p.absarc(cx+a,cy+b,r,0,Math.PI/2);p.lineTo(cx-a,cy+b+r);p.absarc(cx-a,cy+b,r,Math.PI/2,Math.PI);
+  p.lineTo(cx-a-r,cy-b);p.absarc(cx-a,cy-b,r,Math.PI,Math.PI*1.5);p.lineTo(cx+a,cy-b-r);p.absarc(cx+a,cy-b,r,Math.PI*1.5,Math.PI*2);return p};
+const revHole=p=>{const q=new THREE.Path(p.getPoints(24).reverse());return q};
+
+/* наклейки — картинки из Фигмы (кадр 3381:63285, 4 px = 1 мм, с вылетами 3 мм): фасад 115×134, лента 484,3×57,3 */
+const TL=new THREE.TextureLoader();
+const ldT=u=>{const t=TL.load(u);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t};
+const facTexs=[ldT('tex/facade.png'),ldT('tex/facade-track.png'),ldT('tex/facade-color.png')], facTex=facTexs[0], tapeTex=[ldT('tex/tape1.png'),ldT('tex/tape2.png'),ldT('tex/tape-logo.png'),ldT('tex/tape-color.png')];
+const mFac=new THREE.MeshStandardMaterial({map:facTex,roughness:.42,polygonOffset:true,polygonOffsetFactor:-2});
+const mTape=new THREE.MeshStandardMaterial({map:tapeTex[0],roughness:.42,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2});
+function drawCopy(i){mTape.map=tapeTex[i];mTape.needsUpdate=true}
+// UV по координатам шейпа: f(x,y) → [s, d] — s вдоль ленты от старта, d от края фасада, мм
+function setUV(geo,f,W,H,ox,oy){const p=geo.attributes.position,uv=geo.attributes.uv;
+  for(let i=0;i<p.count;i++){const [a,b]=f(p.getX(i),p.getY(i));uv.setXY(i,(a+ox)/W,1-(b+oy)/H)}uv.needsUpdate=true;return geo}
+function device(v){
+  const g=new THREE.Group();
+  const add=(geo,mat,x,y,z,p=g)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;p.add(m);return m};
+  add(new THREE.BoxGeometry(BW,BL,DH-PL),mDev,0,0,(DH-PL)/2);
+  const s=rect(-DW/2,-DL/2,DW/2,DL/2);s.holes.push(rect(wx0,wyB,wx1,wyT,THREE.Path));
+  for(const [x,y] of screws){const h=new THREE.Path();h.absarc(x,y,R,0,Math.PI*2,true);s.holes.push(h)}
+  add(new THREE.ExtrudeGeometry(s,{depth:PL,bevelEnabled:false,curveSegments:24}),mDev,0,0,DH-PL);
+  { const no=new THREE.MeshBasicMaterial({visible:false});   // тёмные стенки только внутри окна
+    add(new THREE.BoxGeometry(wx1-wx0-.02,wyT-wyB-.02,PL),Array(4).fill(new THREE.MeshStandardMaterial({color:0x2b2b2b,roughness:.5,side:THREE.BackSide})).concat([no,no]),0,wcy,DH-PL/2); }
+  add(new THREE.BoxGeometry(84.2,84.5,.6),mWin,0,wcy,DH-PL+.3);
+  add(new THREE.TorusGeometry(26.5,1.1,12,64),mRing,0,wcy,DH-PL+.8);
+  for(const [x,y] of screws){const c=add(new THREE.CylinderGeometry(R-.15,R-.15,.6,24),mMetal,x,y,DH-PL+.4);c.rotation.x=Math.PI/2}
+  const side=(w,h,mat,y,z,d,rr)=>{const m=add(new THREE.ExtrudeGeometry(pill(0,0,w,h,THREE.Shape,rr),{depth:d,bevelEnabled:false,curveSegments:16}),mat,BW/2-.5,y,z);m.rotation.y=Math.PI/2};
+  side(5.8,10.4,mDark,by,bz,.6);side(4.6,9.2,mDev,by,bz,1.1);side(4.4,9.3,mDark,uy,uz,.6,1.5);
+
+  /* наклейки. ins — отступы края от рёбер: v=1 — фасад 0,5, лента без стыков на углах; v=2 — крест: фасад в край, стыки на углах */
+  const E=.04, F=0, C=0, B=0;   // на модели наклейки в край, без белых полосок   // F — край фасада, C — вертикальные углы корпуса, B — тыл
+  const face=(shape,rx,ry,pos,mat,uvf)=>{const geo=new THREE.ShapeGeometry(shape,32);
+    if(uvf)setUV(geo,...uvf);
+    const m=new THREE.Mesh(geo,mat);m.rotation.set(rx,ry,0);m.position.set(...pos);m.receiveShadow=true;g.add(m)};
+  // фасад: картинка 115×134 — от края фасада −2,5 мм (рез на 0,5 внутри, вылет 3)
+  { const s=rect(-DW/2+F,-DL/2+F,DW/2-F,DL/2-F);
+    s.holes.push(rect(wx0,wyB,wx1,wyT,THREE.Path));                // окно — вырез точно в размер
+    for(const [x,y] of screws){const h=new THREE.Path();h.absarc(x,y,R+.25,0,Math.PI*2,true);s.holes.push(h)}
+    face(s,0,0,[0,0,DH+E],mFac,[(x,y)=>[x+DW/2,DL/2-y],115,134,2.5,2.5]); }
+  // лента: правая (снизу вверх) → верх (справа налево) → левая (сверху вниз) → низ (слева направо); d — от фасада
+  const TW=484.3,TH=57.3,uR=[(x,y)=>[y+BL/2,x+DH/2],TW,TH,3,2.5],uT=[(x,y)=>[BL+(BW/2-x),y+DH/2],TW,TH,3,2.5],
+        uL=[(x,y)=>[BL+BW+(BL/2-y),DH/2-x],TW,TH,3,2.5],uB=[(x,y)=>[2*BL+BW+(x+BW/2),DH/2-y],TW,TH,3,2.5];
+  const zF=DH+E;   // лента доходит до лица наклейки фасада — торец пластины не виден
+  { const s=rect(-(zF-DH/2),-BL/2,-(B-DH/2),BL/2);
+    s.holes.push(revHole(pill(-(bz-DH/2),by,5.8+2*GROW,10.4+2*GROW)));
+    s.holes.push(revHole(pill(-(uz-DH/2),uy,4.4+2*GROW,9.3+2*GROW,THREE.Path,1.5+GROW)));
+    face(s,0,Math.PI/2,[BW/2+E,0,DH/2],mTape,uR); }
+  face(rect(B-DH/2,-BL/2,zF-DH/2,BL/2),0,-Math.PI/2,[-BW/2-E,0,DH/2],mTape,uL);
+  face(rect(-BW/2,-(zF-DH/2),BW/2,-(B-DH/2)),-Math.PI/2,0,[0,BL/2+E,DH/2],mTape,uT);
+  face(rect(-BW/2,B-DH/2,BW/2,zF-DH/2),Math.PI/2,0,[0,-BL/2-E,DH/2],mTape,uB);
+  return g;
+}
+scene.add(device(1));
+
+const door=new THREE.Mesh(new THREE.PlaneGeometry(8000,8000),new THREE.MeshStandardMaterial({color:0xDCDDDE,roughness:.6,metalness:.2}));
+door.receiveShadow=true;scene.add(door);
+
+const V={r:[230,120,390],l:[-230,120,390],t:[0,390,180],f:[0,0,440],s:[-420,30,95]};
+let anim=null;
+function go(n){document.querySelectorAll('[data-v]').forEach(b=>b.classList.toggle('on',b.dataset.v===n));
+  const from=cam.position.clone(),to=new THREE.Vector3(...V[n]),t0=performance.now();
+  anim=t=>{const k=Math.min(1,(t-t0)/800),e=1-Math.pow(1-k,3);cam.position.lerpVectors(from,to,e);if(k>=1)anim=null}}
+document.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>go(b.dataset.v));
+cam.position.set(...V.r);
+const VARS=[[0,0],[0,1],[1,2],[2,3]];
+document.querySelectorAll('[data-dv]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-dv]').forEach(x=>x.classList.toggle('on',x===b));const [f,t]=VARS[+b.dataset.dv];mFac.map=facTexs[f];mFac.needsUpdate=true;drawCopy(t);document.getElementById('vnote').style.visibility=+b.dataset.dv!==2?'visible':'hidden';go(+b.dataset.dv!==2?'l':'r')});
+ctl.minAzimuthAngle=-1.4;ctl.maxAzimuthAngle=1.4;
+
+function resize(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);cam.aspect=w/h;
+  cam.fov=w<600?44:26;cam.updateProjectionMatrix()}
+addEventListener('resize',resize);resize();
+renderer.setAnimationLoop(t=>{if(anim)anim(t);ctl.update();renderer.render(scene,cam)});
+</script>
+</body>
+</html>
