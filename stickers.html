@@ -17,9 +17,11 @@
   .ui{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:8px;flex-wrap:wrap;justify-content:center;width:max-content;max-width:calc(100% - 32px)}
   .ui button{height:38px;padding:0 16px;border:0;border-radius:99px;background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);font:500 14px "Inter Tight",system-ui,sans-serif;cursor:pointer}
   .ui button.on{background:var(--ink);color:#fff;box-shadow:none}
-  .copy{position:absolute;top:60px;left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:6px;width:calc(100% - 32px);max-width:720px}
+  .copy{position:absolute;top:60px;left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:6px;width:calc(100% - 32px);max-width:1000px}
   .copy button{white-space:nowrap;height:32px;padding:0 12px;border:0;border-radius:99px;background:#fff;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);font:500 13px "Inter Tight",system-ui,sans-serif;cursor:pointer}
-  .vnote{position:absolute;left:50%;transform:translateX(-50%);top:142px;font:500 13px "Inter Tight",system-ui,sans-serif;color:#555;white-space:nowrap}
+  .vnote{position:absolute;left:50%;transform:translateX(-50%);top:102px;font:500 13px "Inter Tight",system-ui,sans-serif;color:#555;white-space:nowrap}
+  @media (max-width:800px){.vnote{top:142px}}
+  @media (max-width:520px){.vnote{display:none}}
   .copy button.on{background:#FFDD2D;box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
   .nets{display:grid;grid-template-columns:1fr;gap:16px;padding:16px;max-width:720px;margin:0 auto}
   .card{background:var(--card);border-radius:16px;padding:20px;box-shadow:0 0 0 1px var(--line)}
@@ -34,14 +36,14 @@
 </head>
 <body>
 <div class="stage">
-  <div class="tags"><b>Фасад + лента</b></div>
+  <div class="tags"><b>Проигрывающее устройство</b></div>
   <div class="ui">
     <button data-v="r" class="on">3/4 справа</button>
     <button data-v="l">3/4 слева</button>
     <button data-v="t">Сверху</button>
     <button data-v="f">Фасад</button>
   </div>
-  <div class="copy"><button data-dv="0" class="on">Вариант 1 · надпись 1</button><button data-dv="1">Вариант 1 · надпись 2</button><button data-dv="2">Вариант «трек»</button><button data-dv="3">Цвет коробки</button></div>
+  <div class="copy"><button data-dv="3" class="on">Цветной · фасад 2</button><button data-dv="0">Монохром · надпись 1</button><button data-dv="1">Монохром · надпись 2</button><button data-dv="2">Монохром · трек</button></div>
   <div class="vnote" id="vnote">Надпись — на левой боковой стенке</div>
 </div>
 
@@ -117,9 +119,9 @@ const revHole=p=>{const q=new THREE.Path(p.getPoints(24).reverse());return q};
 /* наклейки — картинки из Фигмы (кадр 3381:63285, 4 px = 1 мм, с вылетами 3 мм): фасад 115×134, лента 484,3×57,3 */
 const TL=new THREE.TextureLoader();
 const ldT=u=>{const t=TL.load(u);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t};
-const facTexs=[ldT('tex/facade.png'),ldT('tex/facade-track.png'),ldT('tex/facade-color.png')], facTex=facTexs[0], tapeTex=[ldT('tex/tape1.png'),ldT('tex/tape2.png'),ldT('tex/tape-logo.png'),ldT('tex/tape-color.png')];
-const mFac=new THREE.MeshStandardMaterial({map:facTex,roughness:.42,polygonOffset:true,polygonOffsetFactor:-2});
-const mTape=new THREE.MeshStandardMaterial({map:tapeTex[0],roughness:.42,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2});
+const facTexs=[ldT('tex/facade.png?v=8'),ldT('tex/facade-inscription-2.png?v=2'),ldT('tex/facade-track.png?v=6'),ldT('tex/facade-color-2.png?v=4')], tapeTex=[ldT('tex/tape1.png?v=6'),ldT('tex/tape2.png?v=6'),ldT('tex/tape-logo.png?v=4'),ldT('tex/tape-color.png?v=6')];
+const mFac=new THREE.MeshStandardMaterial({map:facTexs[3],roughness:.42,polygonOffset:true,polygonOffsetFactor:-2});
+const mTape=new THREE.MeshStandardMaterial({map:tapeTex[3],roughness:.42,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2});
 function drawCopy(i){mTape.map=tapeTex[i];mTape.needsUpdate=true}
 // UV по координатам шейпа: f(x,y) → [s, d] — s вдоль ленты от старта, d от края фасада, мм
 function setUV(geo,f,W,H,ox,oy){const p=geo.attributes.position,uv=geo.attributes.uv;
@@ -169,13 +171,29 @@ door.receiveShadow=true;scene.add(door);
 
 const V={r:[230,120,390],l:[-230,120,390],t:[0,390,180],f:[0,0,440],s:[-420,30,95]};
 let anim=null;
-function go(n){document.querySelectorAll('[data-v]').forEach(b=>b.classList.toggle('on',b.dataset.v===n));
+let activeView='r';
+function go(n){activeView=n;updateVariantNote();document.querySelectorAll('[data-v]').forEach(b=>b.classList.toggle('on',b.dataset.v===n));
   const from=cam.position.clone(),to=new THREE.Vector3(...V[n]),t0=performance.now();
   anim=t=>{const k=Math.min(1,(t-t0)/800),e=1-Math.pow(1-k,3);cam.position.lerpVectors(from,to,e);if(k>=1)anim=null}}
 document.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>go(b.dataset.v));
 cam.position.set(...V.r);
-const VARS=[[0,0],[0,1],[1,2],[2,3]];
-document.querySelectorAll('[data-dv]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-dv]').forEach(x=>x.classList.toggle('on',x===b));const [f,t]=VARS[+b.dataset.dv];mFac.map=facTexs[f];mFac.needsUpdate=true;drawCopy(t);document.getElementById('vnote').style.visibility=+b.dataset.dv!==2?'visible':'hidden';go(+b.dataset.dv!==2?'l':'r')});
+const VARS=[[0,0],[1,1],[2,2],[3,3]];
+const variantButtons=document.querySelectorAll('[data-dv]');
+const variantNote=document.getElementById('vnote');
+let activeVariant=3;
+function updateVariantNote(){variantNote.style.visibility=activeVariant===2||activeView==='f'?'hidden':'visible'}
+variantButtons.forEach(button=>button.onclick=()=>{
+  const variant=Number(button.dataset.dv);
+  const [facade,tape]=VARS[variant];
+  const [,previousTape]=VARS[activeVariant];
+  variantButtons.forEach(option=>option.classList.toggle('on',option===button));
+  mFac.map=facTexs[facade];
+  mFac.needsUpdate=true;
+  drawCopy(tape);
+  activeVariant=variant;
+  if(tape!==previousTape)go(variant===2?'r':'l');
+  updateVariantNote();
+});
 ctl.minAzimuthAngle=-1.4;ctl.maxAzimuthAngle=1.4;
 
 function resize(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);cam.aspect=w/h;
