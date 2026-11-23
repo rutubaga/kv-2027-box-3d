@@ -43,7 +43,7 @@
     <button data-v="t">Сверху</button>
     <button data-v="f">Фасад</button>
   </div>
-  <div class="copy"><button data-dv="3" class="on">Цветной · фасад 2</button><button data-dv="0">Монохром · надпись 1</button><button data-dv="1">Монохром · надпись 2</button><button data-dv="2">Монохром · трек</button></div>
+  <div class="copy"><button data-dv="3" class="on">Цветной · надпись 1</button><button data-dv="5">Цветной · надпись 2</button><button data-dv="4">Цветной · трек</button></div>
   <div class="vnote" id="vnote">Надпись — на левой боковой стенке</div>
 </div>
 
@@ -119,7 +119,7 @@ const revHole=p=>{const q=new THREE.Path(p.getPoints(24).reverse());return q};
 /* наклейки — картинки из Фигмы (кадр 3381:63285, 4 px = 1 мм, с вылетами 3 мм): фасад 115×134, лента 484,3×57,3 */
 const TL=new THREE.TextureLoader();
 const ldT=u=>{const t=TL.load(u);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t};
-const facTexs=[ldT('tex/facade.png?v=8'),ldT('tex/facade-inscription-2.png?v=2'),ldT('tex/facade-track.png?v=6'),ldT('tex/facade-color-2.png?v=4')], tapeTex=[ldT('tex/tape1.png?v=6'),ldT('tex/tape2.png?v=6'),ldT('tex/tape-logo.png?v=4'),ldT('tex/tape-color.png?v=6')];
+const facTexs=[ldT('tex/facade.png?v=9'),ldT('tex/facade-inscription-2.png?v=3'),ldT('tex/facade-track.png?v=6'),ldT('tex/facade-color-2.png?v=5'),ldT('tex/facade-color-track.png?v=6'),ldT('tex/facade-color-m2.png?v=2')], tapeTex=[ldT('tex/tape1.png?v=6'),ldT('tex/tape2.png?v=6'),ldT('tex/tape-logo.png?v=4'),ldT('tex/tape-color.png?v=6'),ldT('tex/tape-color-track.png?v=1'),ldT('tex/tape-color-m2.png?v=3')];
 const mFac=new THREE.MeshStandardMaterial({map:facTexs[3],roughness:.42,polygonOffset:true,polygonOffsetFactor:-2});
 const mTape=new THREE.MeshStandardMaterial({map:tapeTex[3],roughness:.42,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2});
 function drawCopy(i){mTape.map=tapeTex[i];mTape.needsUpdate=true}
@@ -177,11 +177,11 @@ function go(n){activeView=n;updateVariantNote();document.querySelectorAll('[data
   anim=t=>{const k=Math.min(1,(t-t0)/800),e=1-Math.pow(1-k,3);cam.position.lerpVectors(from,to,e);if(k>=1)anim=null}}
 document.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>go(b.dataset.v));
 cam.position.set(...V.r);
-const VARS=[[0,0],[1,1],[2,2],[3,3]];
+const VARS=[[0,0],[1,1],[2,2],[3,3],[4,4],[5,5]];
 const variantButtons=document.querySelectorAll('[data-dv]');
 const variantNote=document.getElementById('vnote');
 let activeVariant=3;
-function updateVariantNote(){variantNote.style.visibility=activeVariant===2||activeView==='f'?'hidden':'visible'}
+function updateVariantNote(){variantNote.style.visibility=activeVariant===2||activeVariant===4||activeView==='f'?'hidden':'visible'}
 variantButtons.forEach(button=>button.onclick=()=>{
   const variant=Number(button.dataset.dv);
   const [facade,tape]=VARS[variant];
@@ -191,7 +191,7 @@ variantButtons.forEach(button=>button.onclick=()=>{
   mFac.needsUpdate=true;
   drawCopy(tape);
   activeVariant=variant;
-  if(tape!==previousTape)go(variant===2?'r':'l');
+  if(tape!==previousTape)go(variant===2||variant===4?'r':'l');
   updateVariantNote();
 });
 ctl.minAzimuthAngle=-1.4;ctl.maxAzimuthAngle=1.4;
