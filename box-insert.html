@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Коробка с ложементом</title>
+<link rel="preload" as="image" href="tex/card/dev-f5.webp?v=51e72759ebc3" fetchpriority="high">
+<link rel="preload" as="image" href="tex/card/dev-b5.webp?v=402d38a29bf9" fetchpriority="high">
 <style>
   /* 3D-модель коробки 330×210×65 с откидной крышкой и клапаном.
      Текстуры — развёртки из Фигмы: outer.jpg (вид снаружи), inner.jpg (вид изнутри), 4 px = 1 мм, вылет 12 px. */
@@ -15,7 +17,7 @@
   .ui button{height:40px;padding:0 18px;border:0;border-radius:99px;background:var(--ink);color:#fff;font:500 14px "Inter Tight",system-ui,sans-serif;cursor:pointer}
   .ui button.g{background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1px rgba(0,0,0,.14)}
   .ui.cards{width:760px;padding:12px;border-radius:24px;background:rgba(243,242,238,.95)}
-  .ui.cards::before{content:'Открытка · лицо и оборот';flex-basis:100%;font-size:12px;color:#8a8a8a;text-align:center}
+  .cards-status{flex-basis:100%;font-size:12px;color:#8a8a8a;text-align:center}
   .ui.cards button{height:34px;padding:0 14px;font-size:13px}
   .ui.cards .placement{flex-basis:100%;display:flex;justify-content:center;margin-top:4px}
   .variant-control{display:inline-flex;align-items:center;border-radius:99px;background:#fff;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14)}
@@ -37,7 +39,7 @@ if(location.protocol==='file:')location.replace('http://localhost:8765/box-inser
 </head>
 <body>
 <div class="load" id="load">Загружаю модель…</div>
-<div class="ui cards" id="cards"><div class="placement"><button id="cardsBtn" aria-pressed="false">Положить в коробку</button></div></div>
+<div class="ui cards" id="cards"><div class="cards-status" id="cardStatus" role="status">Загружаю открытку…</div><div class="placement"><button id="cardsBtn" aria-pressed="false">Положить в коробку</button></div></div>
 <script type="module">
 import * as THREE from 'three';
 import {RoomEnvironment} from './vendor/three/RoomEnvironment.js';
@@ -76,7 +78,12 @@ ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
 
 const manager=new THREE.LoadingManager();
 let loadFailed=false;
-manager.onLoad=()=>{if(!loadFailed)document.getElementById('load')?.remove();invalidate()};
+manager.onLoad=()=>{
+  if(!loadFailed)document.getElementById('load')?.remove();
+  invalidate();
+  if('requestIdleCallback' in window)requestIdleCallback(prefetchCards,{timeout:1200});
+  else setTimeout(prefetchCards,0);
+};
 manager.onError=url=>{loadFailed=true;const label=document.getElementById('load');if(label)label.textContent='Не удалось загрузить изображение. Обновите страницу.';console.error('Не загружен ресурс:',url)};
 const tl=new THREE.TextureLoader(manager);
 const tex=u=>{const t=tl.load(u,invalidate);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t};
@@ -237,21 +244,55 @@ const mFoam=new THREE.MeshStandardMaterial({color:0x161616,roughness:.92,metalne
 }
 
 /* ОТКРЫТКИ A6 105×148 на первом плане: слева лицо, справа сразу оборот; коробка с устройством — на фоне.
-   Картинки из Фигмы по линии реза (без вылетов), tex/card/set-fN.jpg / set-bN.jpg. Рисуются отдельной сценой поверх коробки. */
+   Картинки из Фигмы по линии реза (без вылетов). Рисуются отдельной сценой поверх коробки. */
 /* Варианты: по умолчанию прежние лица и обороты (set-fN / set-bN).
    «Светлый вариант» — лица и обороты в оттенках устройства (tex/card/dev-fN / dev-bN, секция «Новые варианты» в Фигме).
    «Коробка спереди» есть только в светлом, «Полный KV» и «Сокращённый KV» — только в тёмном. */
 const CARDS=[['Коробка спереди','5','light'],['Полный KV','1','dark'],['Сокращённый KV','2','dark'],['3D-коробка ♫','3','both'],['3D-коробка ♪','4','both']];
-const cardTex={};
-const CARD_REVS={"set-f1":"3d5b0e7ab161","set-b1":"ba86139efb2e","set-f2":"59b17213d665","set-b2":"7196029e37e9","set-f3":"d438596375c6","set-b3":"b2762c571067","set-f4":"51405e80a17f","set-b4":"aec7872d46c6","dev-f3":"ec85018df5fe","dev-b3":"ead45888048d","dev-f4":"f667e89d265e","dev-b4":"9478ada29d44","dev-f5":"c540843564fb","dev-b5":"77184c12a219"};
+const cardTex=new Map();
+const CARD_REVS={"set-f1":"5a4cc99b23ed","set-b1":"079fe17731a8","set-f2":"46c4f3fe2dba","set-b2":"9a9b7746f71e","set-f3":"5a08744d958e","set-b3":"af1407d07287","set-f4":"23edeaca6e2c","set-b4":"632935c60550","dev-f3":"7637f97dbacb","dev-b3":"03f1b164efdc","dev-f4":"213233dd113f","dev-b4":"207e6c5b0c1c","dev-f5":"51e72759ebc3","dev-b5":"402d38a29bf9"};
 let curCard=0;
 const lightThemes={};
-function loadCard(k,light){const id=CARDS[k][1], key=id+(light?'L':'D');
-  return cardTex[key]??=(['f','b'].map(side=>{const file=(light?'dev-':'set-')+side+id;return tex('tex/card/'+file+'.jpg?v='+(CARD_REVS[file]??'1'))}))}
-const firstTex=loadCard(0,true);   // Остальные варианты загружаются только при выборе и остаются в памяти.
+function loadCard(id,light,priority){
+  const prefix=light?'dev-':'set-';
+  const key=prefix+id;
+  const cached=cardTex.get(key);
+  if(cached){
+    if(priority==='high')for(const img of cached.images)img.fetchPriority='high';
+    return cached.ready;
+  }
+  const images=['f','b'].map(side=>{
+    const file=prefix+side+id;
+    const img=new Image();
+    img.fetchPriority=priority;
+    img.src=`tex/card/${file}.webp?v=${CARD_REVS[file]}`;
+    return img;
+  });
+  const ready=Promise.all(images.map(img=>img.decode())).then(()=>images.map(img=>{
+    const texture=new THREE.Texture(img);
+    texture.colorSpace=THREE.SRGBColorSpace;
+    texture.anisotropy=8;
+    texture.needsUpdate=true;
+    return texture;
+  }),()=>{
+    cardTex.delete(key);
+    return null;
+  });
+  cardTex.set(key,{images,ready});
+  return ready;
+}
+
+async function prefetchCards(){
+  if(navigator.connection?.saveData||navigator.connection?.effectiveType?.endsWith('2g'))return;
+  for(const [,id,mode] of CARDS){
+    if(mode!=='light')await loadCard(id,false,'low');
+    if(mode!=='dark')await loadCard(id,true,'low');
+  }
+}
+
 const ov=new THREE.Scene(), ovCam=new THREE.PerspectiveCamera(30,1,10,5000);
 const mPaper=new THREE.MeshBasicMaterial({color:0xF4F2EC});
-const mFront=new THREE.MeshBasicMaterial({map:firstTex[0]}), mBack=new THREE.MeshBasicMaterial({map:firstTex[1]});
+const mFront=new THREE.MeshBasicMaterial(), mBack=new THREE.MeshBasicMaterial();
 /* мягкая тень под открыткой */
 const shTex=(()=>{const c=document.createElement('canvas');c.width=256;c.height=340;const x=c.getContext('2d');
   x.filter='blur(22px)';x.fillStyle='rgba(60,30,0,.55)';x.fillRect(48,52,160,236);return new THREE.CanvasTexture(c)})();
@@ -260,6 +301,7 @@ function cardMesh(mFace){const g=new THREE.Group();
   const s=new THREE.Mesh(new THREE.PlaneGeometry(105*1.6,148*1.6),new THREE.MeshBasicMaterial({map:shTex,transparent:true,depthWrite:false}));
   s.position.set(6,-10,-3);g.add(s);ov.add(g);return g}
 const cFront=cardMesh(mFront), cBack=cardMesh(mBack);
+cFront.visible=cBack.visible=false;
 const packedCard=new THREE.Mesh(new THREE.BoxGeometry(105,148,.6),[mPaper,mPaper,mPaper,mPaper,mFront,mBack]);
 // A6 105×148 мм лежит на ложементе слева от корпуса устройства 110,2×129,2 мм.
 packedCard.rotation.x=-Math.PI/2;packedCard.position.set(discCX,T+IN_H+1,0);
@@ -277,15 +319,34 @@ function layoutCards(){
   layoutBox(panelTop-24);
   invalidate();
 }
+const ui=document.getElementById('cards');
+const cardStatus=document.getElementById('cardStatus');
+let cardRequest=0;
+async function showCard(k,light=CARDS[k][2]==='light'||!!lightThemes[CARDS[k][1]]){
+  const request=++cardRequest;
+  cardStatus.textContent='Загружаю открытку…';
+  const textures=await loadCard(CARDS[k][1],light,'high');
+  if(request!==cardRequest)return;
+  if(!textures){
+    cardStatus.textContent='Не удалось загрузить открытку. Попробуйте ещё раз.';
+    return;
+  }
+
+  if(!mFront.map)mFront.needsUpdate=mBack.needsUpdate=true;
+  [mFront.map,mBack.map]=textures;
+  cFront.visible=cBack.visible=true;
+  packedCard.visible=!cardsOn;
+  curCard=k;
+  if(CARDS[k][2]==='both')lightThemes[CARDS[k][1]]=light;
+  ui.querySelectorAll('[data-variant]').forEach((x,i)=>{x.className='variant-label'+(i===curCard?'':' g');x.setAttribute('aria-pressed',String(i===curCard))});
+  ui.querySelectorAll('[data-theme-card]').forEach(x=>x.classList.toggle('is-active',Number(x.dataset.themeCard)===curCard));
+  ui.querySelectorAll('[data-palette]').forEach(x=>x.setAttribute('aria-pressed',String(!!lightThemes[x.dataset.cardId]===(x.dataset.palette==='orange'))));
+  cardStatus.textContent='Открытка · лицо и оборот';
+  invalidate();
+}
 {
-  const ui=document.getElementById('cards');
-  function showCard(){const [,id,mode]=CARDS[curCard], light=mode==='light'||(mode==='both'&&!!lightThemes[id]), t=loadCard(curCard,light);
-    mFront.map=t[0];mBack.map=t[1];mFront.needsUpdate=mBack.needsUpdate=true;
-    ui.querySelectorAll('[data-variant]').forEach((x,i)=>{x.className='variant-label'+(i===curCard?'':' g');x.setAttribute('aria-pressed',String(i===curCard))});
-    ui.querySelectorAll('[data-theme-card]').forEach(x=>x.classList.toggle('is-active',Number(x.dataset.themeCard)===curCard));
-    ui.querySelectorAll('[data-palette]').forEach(x=>x.setAttribute('aria-pressed',String(!!lightThemes[x.dataset.cardId]===(x.dataset.palette==='orange'))));invalidate()}
   CARDS.forEach(([n,id,mode],k)=>{
-    const b=document.createElement('button');b.textContent=n;b.className='variant-label'+(k?' g':'');b.dataset.variant=k;b.setAttribute('aria-pressed',String(k===0));b.onclick=()=>{curCard=k;showCard()};
+    const b=document.createElement('button');b.textContent=n;b.className='variant-label'+(k?' g':'');b.dataset.variant=k;b.setAttribute('aria-pressed',String(k===0));b.onclick=()=>showCard(k);
     let item=b;
     if(mode==='both'){
       const group=document.createElement('div');group.className='variant-control';group.dataset.themeCard=k;group.appendChild(b);
@@ -293,7 +354,7 @@ function layoutCards(){
       for(const [palette,color,label] of [['pink','#FF8C9B','Розовый'],['orange','#FFB326','Оранжевый']]){
         const t=document.createElement('button');t.className='theme-choice';t.style.setProperty('--theme-color',color);t.dataset.palette=palette;t.dataset.cardId=id;
         t.title=label+' вариант';t.setAttribute('aria-label',n+' · '+label.toLowerCase()+' вариант');t.setAttribute('aria-pressed',String(palette==='pink'));
-        t.onclick=()=>{lightThemes[id]=palette==='orange';curCard=k;showCard()};themes.appendChild(t);
+        t.onclick=()=>showCard(k,palette==='orange');themes.appendChild(t);
       }
       group.appendChild(themes);item=group;
     }
@@ -330,7 +391,7 @@ function layoutBox(cardsTop){
 }
 
 const bCards=document.getElementById('cardsBtn');
-bCards.onclick=()=>{cardsOn=!cardsOn;packedCard.visible=!cardsOn;
+bCards.onclick=()=>{cardsOn=!cardsOn;packedCard.visible=!cardsOn&&!!mFront.map;
   bCards.textContent=cardsOn?'Положить в коробку':'Достать открытку';bCards.setAttribute('aria-pressed',String(!cardsOn));layoutCards()};
 
 renderer.autoClear=false;
@@ -339,6 +400,7 @@ function invalidate(){if(renderQueued)return;renderQueued=true;requestAnimationF
 function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);cam.aspect=ovCam.aspect=w/h;cam.updateProjectionMatrix();ovCam.updateProjectionMatrix();layoutCards()}
 addEventListener('resize',resize);resize();
 new ResizeObserver(layoutCards).observe(document.getElementById('cards'));
+showCard(0);
 
 function renderScene(){
   renderQueued=false;
