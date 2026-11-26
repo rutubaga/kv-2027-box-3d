@@ -3,31 +3,44 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Коробка KV 2027 — 3D</title>
+<title>Коробка с ложементом</title>
 <style>
   /* 3D-модель коробки 330×210×65 с откидной крышкой и клапаном.
      Текстуры — развёртки из Фигмы: outer.jpg (вид снаружи), inner.jpg (вид изнутри), 4 px = 1 мм, вылет 12 px. */
   :root{--bg:#F3F2EE;--ink:#111}
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%;background:var(--bg);overflow:hidden;font:400 14px/1.4 "Inter Tight",system-ui,sans-serif;color:var(--ink)}
-  canvas{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
-  canvas:active{cursor:grabbing}
+  canvas{display:block;width:100%;height:100%}
   .ui{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;width:max-content;max-width:calc(100% - 24px)}
   .ui button{height:40px;padding:0 18px;border:0;border-radius:99px;background:var(--ink);color:#fff;font:500 14px "Inter Tight",system-ui,sans-serif;cursor:pointer}
   .ui button.g{background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1px rgba(0,0,0,.14)}
-  .hint{position:absolute;left:50%;top:16px;transform:translateX(-50%);font-size:12px;color:#8a8a8a;pointer-events:none;transition:opacity .4s}
-  .load{position:absolute;inset:0;display:grid;place-items:center;font-size:13px;color:#8a8a8a}
+  .ui.cards{width:760px;padding:12px;border-radius:24px;background:rgba(243,242,238,.95)}
+  .ui.cards::before{content:'Открытка · лицо и оборот';flex-basis:100%;font-size:12px;color:#8a8a8a;text-align:center}
+  .ui.cards button{height:34px;padding:0 14px;font-size:13px}
+  .ui.cards .placement{flex-basis:100%;display:flex;justify-content:center;margin-top:4px}
+  .variant-control{display:inline-flex;align-items:center;border-radius:99px;background:#fff;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14)}
+  .variant-control.is-active{background:var(--ink)}
+  .ui.cards .variant-control .variant-label{padding-right:8px;background:transparent;box-shadow:none}
+  .variant-themes{display:flex;align-items:center;gap:2px;padding-right:8px}
+  .ui.cards .theme-choice{display:grid;place-items:center;width:24px;height:28px;padding:4px;background:transparent;color:var(--ink)}
+  .variant-control.is-active .theme-choice{color:#fff}
+  .theme-choice::after{content:'';width:14px;height:14px;border-radius:50%;background:var(--theme-color);box-shadow:0 0 0 1px rgba(0,0,0,.12)}
+  .theme-choice[aria-pressed="true"]::after{outline:2px solid currentColor;outline-offset:2px}
+  .ui button:focus-visible{outline:2px solid #777;outline-offset:3px}
+  .load{position:absolute;inset:0;display:grid;place-items:center;font-size:13px;color:#8a8a8a;pointer-events:none}
 </style>
-<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.165.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.165.0/examples/jsm/"}}</script>
+<script>
+// При открытии двойным щелчком переводим на локальный сервер: file:// блокирует ES-модули.
+if(location.protocol==='file:')location.replace('http://localhost:8765/box-insert.html');
+</script>
+<script type="importmap">{"imports":{"three":"./vendor/three/three.module.min.js"}}</script>
 </head>
 <body>
 <div class="load" id="load">Загружаю модель…</div>
-<div class="hint" id="hint">Покрутите коробку</div>
-<div class="ui"><button class="g" id="p1">Крупный паттерн</button><button class="g" id="p2">Мелкий паттерн</button><button id="open">Открыть</button><button class="g" id="view">Вид сверху</button></div>
+<div class="ui cards" id="cards"><div class="placement"><button id="cardsBtn" aria-pressed="false">Положить в коробку</button></div></div>
 <script type="module">
 import * as THREE from 'three';
-import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
-import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
+import {RoomEnvironment} from './vendor/three/RoomEnvironment.js';
 
 /* размеры в мм по развёртке: 330×210×65, клапан 65, картон 2 мм */
 const W=330, D=210, H=65, FLAP=65, T=2;
@@ -48,11 +61,7 @@ scene.environment=pm.fromScene(new RoomEnvironment(),.04).texture;
 scene.environmentIntensity=.25;
 
 const cam=new THREE.PerspectiveCamera(30,1,10,6000);
-cam.position.set(520,430,700);
-const ctl=new OrbitControls(cam,renderer.domElement);
-ctl.target.set(0,35,0);ctl.enableDamping=true;ctl.dampingFactor=.08;
-ctl.minDistance=380;ctl.maxDistance=1600;ctl.maxPolarAngle=Math.PI*.49;ctl.enablePan=false;
-ctl.autoRotate=true;ctl.autoRotateSpeed=.6;
+cam.position.set(370,920,920);
 
 /* свет ровный: крышка и стенки одного тона, как в печати */
 const sun=new THREE.DirectionalLight(0xffffff,.55);sun.position.set(-380,900,520);
@@ -65,9 +74,12 @@ scene.add(new THREE.AmbientLight(0xffffff,.55));
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(4000,4000),new THREE.ShadowMaterial({opacity:.16}));
 ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
 
-let ready=0;
-const tl=new THREE.TextureLoader();
-const tex=u=>{const t=tl.load(u,()=>{if(++ready>=3)document.getElementById('load')?.remove()});t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t};
+const manager=new THREE.LoadingManager();
+let loadFailed=false;
+manager.onLoad=()=>{if(!loadFailed)document.getElementById('load')?.remove();invalidate()};
+manager.onError=url=>{loadFailed=true;const label=document.getElementById('load');if(label)label.textContent='Не удалось загрузить изображение. Обновите страницу.';console.error('Не загружен ресурс:',url)};
+const tl=new THREE.TextureLoader(manager);
+const tex=u=>{const t=tl.load(u,invalidate);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t};
 /* насыщенность печати: усиливаем цвет текстуры в шейдере */
 const SAT=1.35;
 const saturate=m=>{m.onBeforeCompile=s=>{s.fragmentShader=s.fragmentShader.replace('#include <map_fragment>',
@@ -76,13 +88,9 @@ const saturate=m=>{m.onBeforeCompile=s=>{s.fragmentShader=s.fragmentShader.repla
   diffuseColor.rgb=clamp(mix(vec3(l),diffuseColor.rgb,${SAT.toFixed(2)}),0.,1.);`)};return m};
 /* снаружи 3275:12680 (без паттерна в карманах); внутри: 1 — 3259:26481 крупный паттерн, 2 — 3330:14677 мелкий паттерн 60% */
 const OUT=tex('outer3.jpg?rev=f740fcd3f861');
-const INN={1:tex('inner3.jpg?rev=d8615fdfdaca'),2:tex('inner4.jpg?rev=0b3c7cb7ab87')};
+const INN=tex('inner3.jpg?rev=d8615fdfdaca');
 const mOut=saturate(new THREE.MeshStandardMaterial({map:OUT,roughness:.85,metalness:0}));
-const mIn=saturate(new THREE.MeshStandardMaterial({map:INN[1],roughness:.9,metalness:0}));
-function setPat(n){mIn.map=INN[n];mIn.needsUpdate=true;
-  for(const k of [1,2]) document.getElementById('p'+k).style.background=k===n?'#FFDD2D':'#fff';}
-for(const n of [1,2]) document.getElementById('p'+n).onclick=()=>setPat(n);
-setPat(1);
+const mIn=saturate(new THREE.MeshStandardMaterial({map:INN,roughness:.9,metalness:0}));
 const mEdge=new THREE.MeshStandardMaterial({color:EDGE,roughness:.95});
 
 /* четырёхугольник: углы в мм ↔ углы на развёртке в пикселях (a,b,c,d по кругу) */
@@ -137,6 +145,162 @@ panel(box,[[x1,0,z1],[x1,0,z0],[x1,H,z0],[x1,H,z1]],
   [[1592,272],[1592,1112],[1852,1112],[1852,272]],
   [[1592,2212],[1592,1372],[1852,1372],[1852,2212]]);
 
+/* размеры по ТЗ: фасадная пластина 110×129, корпус 110,2×129,2, глубина 52,3 */
+const DW=110, DL=129, BW=110.2, BL=129.2, DH=52.3, PL=3;
+const wx0=-DW/2+12.9, wx1=DW/2-12.9, wyT=DL/2-13, wyB=wyT-84.5, wcy=(wyT+wyB)/2;
+const R=2.1, off=3.4+R, screws=[[-1,-1],[1,-1],[-1,1],[1,1]].map(([a,b])=>[a*(DW/2-off),b*(DL/2-off)]);
+const by=BL/2-48.4-5.2, bz=26.9+2.9, uy=-BL/2+48.9+4.65, uz=27.9+2.2;   // кнопка и USB-C, от тыла
+const GROW=.5;                                                       // вырезы шире отверстий на 0,5 на сторону
+
+const mDev=new THREE.MeshStandardMaterial({color:0xF6F6F3,roughness:.5});
+const mWin=new THREE.MeshStandardMaterial({color:0x3a3a3c,roughness:.12,metalness:.1});
+const mDark=new THREE.MeshStandardMaterial({color:0x2b2b2b,roughness:.5});
+const mMetal=new THREE.MeshStandardMaterial({color:0xb9b9b9,roughness:.3,metalness:.85});
+const mRing=new THREE.MeshStandardMaterial({color:0xFFD27A,emissive:0xFFB830,emissiveIntensity:.9,roughness:.4});
+const mStk=new THREE.MeshStandardMaterial({color:0xFFDD2D,roughness:.42,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2});
+
+const rect=(x0,y0,x1,y1,P=THREE.Shape)=>{const s=new P();s.moveTo(x0,y0);s.lineTo(x1,y0);s.lineTo(x1,y1);s.lineTo(x0,y1);s.closePath();return s};
+const pill=(cx,cy,w,h,P=THREE.Path,rr)=>{const p=new P(),r=rr??Math.min(w,h)/2,a=w/2-r,b=h/2-r;
+  p.moveTo(cx+a+r,cy-b);p.lineTo(cx+a+r,cy+b);p.absarc(cx+a,cy+b,r,0,Math.PI/2);p.lineTo(cx-a,cy+b+r);p.absarc(cx-a,cy+b,r,Math.PI/2,Math.PI);
+  p.lineTo(cx-a-r,cy-b);p.absarc(cx-a,cy-b,r,Math.PI,Math.PI*1.5);p.lineTo(cx+a,cy-b-r);p.absarc(cx+a,cy-b,r,Math.PI*1.5,Math.PI*2);return p};
+const revHole=p=>{const q=new THREE.Path(p.getPoints(24).reverse());return q};
+
+/* наклейки — картинки из Фигмы (кадр 3381:63285, 4 px = 1 мм, с вылетами 3 мм): фасад 115×134, лента 484,3×57,3 */
+const mFac=new THREE.MeshStandardMaterial({map:tex('tex/facade-color-2.webp?v=1'),roughness:.42,polygonOffset:true,polygonOffsetFactor:-2});
+const mTape=new THREE.MeshStandardMaterial({map:tex('tex/tape-color.webp?v=1'),roughness:.42,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2});
+// UV по координатам шейпа: f(x,y) → [s, d] — s вдоль ленты от старта, d от края фасада, мм
+function setUV(geo,f,W,H,ox,oy){const p=geo.attributes.position,uv=geo.attributes.uv;
+  for(let i=0;i<p.count;i++){const [a,b]=f(p.getX(i),p.getY(i));uv.setXY(i,(a+ox)/W,1-(b+oy)/H)}uv.needsUpdate=true;return geo}
+function device(v){
+  const g=new THREE.Group();
+  const add=(geo,mat,x,y,z,p=g)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;p.add(m);return m};
+  add(new THREE.BoxGeometry(BW,BL,DH-PL),mDev,0,0,(DH-PL)/2);
+  const s=rect(-DW/2,-DL/2,DW/2,DL/2);s.holes.push(rect(wx0,wyB,wx1,wyT,THREE.Path));
+  for(const [x,y] of screws){const h=new THREE.Path();h.absarc(x,y,R,0,Math.PI*2,true);s.holes.push(h)}
+  add(new THREE.ExtrudeGeometry(s,{depth:PL,bevelEnabled:false,curveSegments:24}),mDev,0,0,DH-PL);
+  { const no=new THREE.MeshBasicMaterial({visible:false});   // тёмные стенки только внутри окна
+    add(new THREE.BoxGeometry(wx1-wx0-.02,wyT-wyB-.02,PL),Array(4).fill(new THREE.MeshStandardMaterial({color:0x2b2b2b,roughness:.5,side:THREE.BackSide})).concat([no,no]),0,wcy,DH-PL/2); }
+  add(new THREE.BoxGeometry(84.2,84.5,.6),mWin,0,wcy,DH-PL+.3);
+  add(new THREE.TorusGeometry(26.5,1.1,12,64),mRing,0,wcy,DH-PL+.8);
+  for(const [x,y] of screws){const c=add(new THREE.CylinderGeometry(R-.15,R-.15,.6,24),mMetal,x,y,DH-PL+.4);c.rotation.x=Math.PI/2}
+  const side=(w,h,mat,y,z,d,rr)=>{const m=add(new THREE.ExtrudeGeometry(pill(0,0,w,h,THREE.Shape,rr),{depth:d,bevelEnabled:false,curveSegments:16}),mat,BW/2-.5,y,z);m.rotation.y=Math.PI/2};
+  side(5.8,10.4,mDark,by,bz,.6);side(4.6,9.2,mDev,by,bz,1.1);side(4.4,9.3,mDark,uy,uz,.6,1.5);
+
+  /* наклейки. ins — отступы края от рёбер: v=1 — фасад 0,5, лента без стыков на углах; v=2 — крест: фасад в край, стыки на углах */
+  const E=.04, F=0, C=0, B=0;   // на модели наклейки в край, без белых полосок   // F — край фасада, C — вертикальные углы корпуса, B — тыл
+  const face=(shape,rx,ry,pos,mat,uvf)=>{const geo=new THREE.ShapeGeometry(shape,32);
+    if(uvf)setUV(geo,...uvf);
+    const m=new THREE.Mesh(geo,mat);m.rotation.set(rx,ry,0);m.position.set(...pos);m.receiveShadow=true;g.add(m)};
+  // фасад: картинка 115×134 — от края фасада −2,5 мм (рез на 0,5 внутри, вылет 3)
+  { const s=rect(-DW/2+F,-DL/2+F,DW/2-F,DL/2-F);
+    s.holes.push(rect(wx0,wyB,wx1,wyT,THREE.Path));                // окно — вырез точно в размер
+    for(const [x,y] of screws){const h=new THREE.Path();h.absarc(x,y,R+.25,0,Math.PI*2,true);s.holes.push(h)}
+    face(s,0,0,[0,0,DH+E],mFac,[(x,y)=>[x+DW/2,DL/2-y],115,134,2.5,2.5]); }
+  // лента: правая (снизу вверх) → верх (справа налево) → левая (сверху вниз) → низ (слева направо); d — от фасада
+  const TW=484.3,TH=57.3,uR=[(x,y)=>[y+BL/2,x+DH/2],TW,TH,3,2.5],uT=[(x,y)=>[BL+(BW/2-x),y+DH/2],TW,TH,3,2.5],
+        uL=[(x,y)=>[BL+BW+(BL/2-y),DH/2-x],TW,TH,3,2.5],uB=[(x,y)=>[2*BL+BW+(x+BW/2),DH/2-y],TW,TH,3,2.5];
+  const zF=DH+E;   // лента доходит до лица наклейки фасада — торец пластины не виден
+  { const s=rect(-(zF-DH/2),-BL/2,-(B-DH/2),BL/2);
+    s.holes.push(revHole(pill(-(bz-DH/2),by,5.8+2*GROW,10.4+2*GROW)));
+    s.holes.push(revHole(pill(-(uz-DH/2),uy,4.4+2*GROW,9.3+2*GROW,THREE.Path,1.5+GROW)));
+    face(s,0,Math.PI/2,[BW/2+E,0,DH/2],mTape,uR); }
+  face(rect(B-DH/2,-BL/2,zF-DH/2,BL/2),0,-Math.PI/2,[-BW/2-E,0,DH/2],mTape,uL);
+  face(rect(-BW/2,-(zF-DH/2),BW/2,-(B-DH/2)),-Math.PI/2,0,[0,BL/2+E,DH/2],mTape,uT);
+  face(rect(-BW/2,B-DH/2,BW/2,zF-DH/2),Math.PI/2,0,[0,-BL/2-E,DH/2],mTape,uB);
+  return g;
+}
+
+/* ЛОЖЕМЕНТ: чёрный вкладыш на всю внутреннюю площадь, слева 9 гнёзд под диски ⌀51 (3×3), справа гнездо под устройство */
+const IN_H=38;                                   // высота вкладыша, мм
+const ix0=x0+T, ix1=x1-T, iz0=z0+T, iz1=z1-T;    // внутренний периметр коробки
+const PITCH=57, DR=26;                           // шаг сетки дисков и радиус гнезда (диск ⌀51 + зазор)
+const DEVW=BW+1, DEVL=BL+1;                      // гнездо устройства с зазором 0,5 на сторону
+const gap=((ix1-ix0)-(PITCH*2+2*DR)-DEVW)/3;
+const discCX=ix0+gap+DR+PITCH, devCX=ix1-gap-DEVW/2;
+const mFoam=new THREE.MeshStandardMaterial({color:0x161616,roughness:.92,metalness:0});
+{
+  const s=rect(ix0,-iz1,ix1,-iz0);               // шейп в (x, −z)
+  for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){const h=new THREE.Path();h.absarc(discCX+i*PITCH,-(j*PITCH),DR,0,Math.PI*2,true);s.holes.push(h)}
+  s.holes.push(rect(devCX-DEVW/2,-DEVL/2,devCX+DEVW/2,DEVL/2,THREE.Path));
+  const slab=new THREE.Mesh(new THREE.ExtrudeGeometry(s,{depth:IN_H,bevelEnabled:true,bevelThickness:.6,bevelSize:.6,bevelSegments:2,curveSegments:48}),mFoam);
+  slab.rotation.x=-Math.PI/2;slab.position.y=T;slab.castShadow=slab.receiveShadow=true;box.add(slab);
+  // дно гнёзд и диски
+  const mDiscFace=new THREE.MeshStandardMaterial({color:0xF7F5F0,roughness:.35});
+  const mDiscEdge=new THREE.MeshStandardMaterial({color:0xD9D6CF,roughness:.4});
+  for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){
+    const x=discCX+i*PITCH, z=j*PITCH;
+    const fl=new THREE.Mesh(new THREE.CylinderGeometry(DR+.2,DR+.2,IN_H-6,48),mFoam);fl.position.set(x,T+(IN_H-6)/2,z);fl.receiveShadow=true;box.add(fl);
+    const d=new THREE.Mesh(new THREE.CylinderGeometry(25.5,25.5,3,64),[mDiscEdge,mDiscFace,mDiscEdge]);d.position.set(x,T+IN_H-6+1.5,z);d.castShadow=d.receiveShadow=true;box.add(d);
+  }
+  // устройство фасадом вверх, верх фасада — к петле крышки
+  const dv=device(1);dv.rotation.x=-Math.PI/2;dv.position.set(devCX,T,0);box.add(dv);
+}
+
+/* ОТКРЫТКИ A6 105×148 на первом плане: слева лицо, справа сразу оборот; коробка с устройством — на фоне.
+   Картинки из Фигмы по линии реза (без вылетов), tex/card/set-fN.jpg / set-bN.jpg. Рисуются отдельной сценой поверх коробки. */
+/* Варианты: по умолчанию прежние лица и обороты (set-fN / set-bN).
+   «Светлый вариант» — лица и обороты в оттенках устройства (tex/card/dev-fN / dev-bN, секция «Новые варианты» в Фигме).
+   «Коробка спереди» есть только в светлом, «Полный KV» и «Сокращённый KV» — только в тёмном. */
+const CARDS=[['Коробка спереди','5','light'],['Полный KV','1','dark'],['Сокращённый KV','2','dark'],['3D-коробка ♫','3','both'],['3D-коробка ♪','4','both']];
+const cardTex={};
+const CARD_REVS={"set-f1":"9b81dfac49b9","set-b1":"038ca2ed034f","set-f2":"004511e1db71","set-b2":"dd833d0e9bdd","set-f3":"86ec64adcc56","set-b3":"b410c8e39198","set-f4":"5cfa9ecd7abf","set-b4":"b1b193bdc01a","dev-f3":"472065aced3c","dev-b3":"a5219f2d7c01","dev-f4":"ad69954477b2","dev-b4":"c494713373a1","dev-f5":"b45b23242a28","dev-b5":"efa7a1a97fe8"};
+let curCard=0;
+const lightThemes={};
+function loadCard(k,light){const id=CARDS[k][1], key=id+(light?'L':'D');
+  return cardTex[key]??=(['f','b'].map(side=>{const file=(light?'dev-':'set-')+side+id;return tex('tex/card/'+file+'.jpg?v='+(CARD_REVS[file]??'1'))}))}
+const firstTex=loadCard(0,true);   // Остальные варианты загружаются только при выборе и остаются в памяти.
+const ov=new THREE.Scene(), ovCam=new THREE.PerspectiveCamera(30,1,10,5000);
+const mPaper=new THREE.MeshBasicMaterial({color:0xF4F2EC});
+const mFront=new THREE.MeshBasicMaterial({map:firstTex[0]}), mBack=new THREE.MeshBasicMaterial({map:firstTex[1]});
+/* мягкая тень под открыткой */
+const shTex=(()=>{const c=document.createElement('canvas');c.width=256;c.height=340;const x=c.getContext('2d');
+  x.filter='blur(22px)';x.fillStyle='rgba(60,30,0,.55)';x.fillRect(48,52,160,236);return new THREE.CanvasTexture(c)})();
+function cardMesh(mFace){const g=new THREE.Group();
+  const m=new THREE.Mesh(new THREE.BoxGeometry(105,148,.6),[mPaper,mPaper,mPaper,mPaper,mFace,mPaper]);g.add(m);
+  const s=new THREE.Mesh(new THREE.PlaneGeometry(105*1.6,148*1.6),new THREE.MeshBasicMaterial({map:shTex,transparent:true,depthWrite:false}));
+  s.position.set(6,-10,-3);g.add(s);ov.add(g);return g}
+const cFront=cardMesh(mFront), cBack=cardMesh(mBack);
+const packedCard=new THREE.Mesh(new THREE.BoxGeometry(105,148,.6),[mPaper,mPaper,mPaper,mPaper,mFront,mBack]);
+// A6 105×148 мм лежит на ложементе слева от корпуса устройства 110,2×129,2 мм.
+packedCard.rotation.x=-Math.PI/2;packedCard.position.set(discCX,T+IN_H+1,0);
+packedCard.castShadow=packedCard.receiveShadow=true;packedCard.visible=false;box.add(packedCard);
+let cardsOn=true;
+function layoutCards(){
+  const D=900, a=innerWidth/innerHeight, vh=2*D*Math.tan(THREE.MathUtils.degToRad(ovCam.fov/2)), vw=vh*a;
+  // Нижняя граница открыток всегда на 24 px выше панели, включая переносы кнопок.
+  const panelTop=document.getElementById('cards').getBoundingClientRect().top;
+  const bottom=(innerHeight-panelTop+24)/innerHeight*vh;
+  const gap=.04;                                         // небольшой зазор между лицом и оборотом
+  const s=Math.min(.94*vw/(105*(2+gap)), Math.max(0,panelTop-48)/innerHeight*vh/150);
+  const cw=105*s;
+  for(const [c,dir] of [[cFront,-1],[cBack,1]]){c.scale.setScalar(s);c.position.set(dir*cw*(.5+gap/2),-.5*vh+74*s+bottom,-D);c.rotation.set(-.04,-dir*.1,dir*.012)}
+  layoutBox(panelTop-24);
+  invalidate();
+}
+{
+  const ui=document.getElementById('cards');
+  function showCard(){const [,id,mode]=CARDS[curCard], light=mode==='light'||(mode==='both'&&!!lightThemes[id]), t=loadCard(curCard,light);
+    mFront.map=t[0];mBack.map=t[1];mFront.needsUpdate=mBack.needsUpdate=true;
+    ui.querySelectorAll('[data-variant]').forEach((x,i)=>{x.className='variant-label'+(i===curCard?'':' g');x.setAttribute('aria-pressed',String(i===curCard))});
+    ui.querySelectorAll('[data-theme-card]').forEach(x=>x.classList.toggle('is-active',Number(x.dataset.themeCard)===curCard));
+    ui.querySelectorAll('[data-palette]').forEach(x=>x.setAttribute('aria-pressed',String(!!lightThemes[x.dataset.cardId]===(x.dataset.palette==='orange'))));invalidate()}
+  CARDS.forEach(([n,id,mode],k)=>{
+    const b=document.createElement('button');b.textContent=n;b.className='variant-label'+(k?' g':'');b.dataset.variant=k;b.setAttribute('aria-pressed',String(k===0));b.onclick=()=>{curCard=k;showCard()};
+    let item=b;
+    if(mode==='both'){
+      const group=document.createElement('div');group.className='variant-control';group.dataset.themeCard=k;group.appendChild(b);
+      const themes=document.createElement('div');themes.className='variant-themes';themes.setAttribute('role','group');themes.setAttribute('aria-label',n+' · цвет фона');
+      for(const [palette,color,label] of [['pink','#FF8C9B','Розовый'],['orange','#FFB326','Оранжевый']]){
+        const t=document.createElement('button');t.className='theme-choice';t.style.setProperty('--theme-color',color);t.dataset.palette=palette;t.dataset.cardId=id;
+        t.title=label+' вариант';t.setAttribute('aria-label',n+' · '+label.toLowerCase()+' вариант');t.setAttribute('aria-pressed',String(palette==='pink'));
+        t.onclick=()=>{lightThemes[id]=palette==='orange';curCard=k;showCard()};themes.appendChild(t);
+      }
+      group.appendChild(themes);item=group;
+    }
+    ui.insertBefore(item,ui.querySelector('.placement'));
+  });
+}
+
 /* крышка на петле у верхнего края задней стенки; клапан опускается поверх передней стенки */
 const hinge=new THREE.Group();hinge.position.set(0,H+T,z0);box.add(hinge);
 panel(hinge,[[x0,0,0],[x0,0,D+T],[x1,0,D+T],[x1,0,0]],
@@ -146,30 +310,41 @@ panel(hinge,[[x0,0,D+2*T],[x0,-FLAP-T,D+2*T],[x1,-FLAP-T,D+2*T],[x1,0,D+2*T]],
   [[272,2212],[272,2472],[1592,2472],[1592,2212]],
   [[272,272],[272,12],[1592,12],[1592,272]]);
 
-/* открытие */
-let target=0,ang=0;
-const bOpen=document.getElementById('open');
-bOpen.onclick=()=>{target=target?0:1;bOpen.textContent=target?'Закрыть':'Открыть';stopAuto()};
-let topView=false;
-document.getElementById('view').onclick=()=>{topView=!topView;stopAuto();
-  const from=cam.position.clone(),to=topView?new THREE.Vector3(0,1000,330):new THREE.Vector3(520,430,700),t0=performance.now();
-  (function go(t){const k=Math.min(1,(t-t0)/900),e=1-Math.pow(1-k,3);cam.position.lerpVectors(from,to,e);if(k<1)requestAnimationFrame(go)})(t0);
-  document.getElementById('view').textContent=topView?'Вид сбоку':'Вид сверху';if(topView&&!target)bOpen.click()};
-function stopAuto(){ctl.autoRotate=false;document.getElementById('hint').style.opacity=0}
-renderer.domElement.addEventListener('pointerdown',stopAuto);
+/* Коробка постоянно открыта, камера неподвижна. */
+hinge.rotation.x=-THREE.MathUtils.degToRad(105);
+const boxBounds=new THREE.Box3().setFromObject(box), boxCenter=boxBounds.getCenter(new THREE.Vector3());
+function layoutBox(cardsTop){
+  // Открытая коробка остаётся фоном за крупными открытками, ракурс не вращается.
+  const w=innerWidth,h=innerHeight,areaH=Math.max(60,cardsTop-12),pad=16;
+  const direction=new THREE.Vector3(310,815,920).normalize();
+  const right=new THREE.Vector3().crossVectors(new THREE.Vector3(0,1,0),direction).normalize();
+  const up=new THREE.Vector3().crossVectors(direction,right);
+  const tangent=Math.tan(THREE.MathUtils.degToRad(cam.fov/2));
+  let distance=0;
+  for(const x of [boxBounds.min.x,boxBounds.max.x])for(const y of [boxBounds.min.y,boxBounds.max.y])for(const z of [boxBounds.min.z,boxBounds.max.z]){
+    const v=new THREE.Vector3(x,y,z).sub(boxCenter),depth=v.dot(direction);
+    distance=Math.max(distance,depth+Math.abs(v.dot(right))/(tangent*Math.max(1,w-2*pad)/h),depth+Math.abs(v.dot(up))/(tangent*Math.max(1,areaH-2*pad)/h));
+  }
+  cam.position.copy(boxCenter).addScaledVector(direction,distance);
+  cam.lookAt(boxCenter);cam.setViewOffset(w,h,0,(h-areaH)/2,w,h);
+}
 
-function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}
+const bCards=document.getElementById('cardsBtn');
+bCards.onclick=()=>{cardsOn=!cardsOn;packedCard.visible=!cardsOn;
+  bCards.textContent=cardsOn?'Положить в коробку':'Достать открытку';bCards.setAttribute('aria-pressed',String(!cardsOn));layoutCards()};
+
+renderer.autoClear=false;
+let renderQueued=false;
+function invalidate(){if(renderQueued)return;renderQueued=true;requestAnimationFrame(renderScene)}
+function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);cam.aspect=ovCam.aspect=w/h;cam.updateProjectionMatrix();ovCam.updateProjectionMatrix();layoutCards()}
 addEventListener('resize',resize);resize();
+new ResizeObserver(layoutCards).observe(document.getElementById('cards'));
 
-const clock=new THREE.Clock();
-renderer.setAnimationLoop(()=>{
-  const dt=Math.min(.05,clock.getDelta());
-  ang+=(target-ang)*Math.min(1,dt*3.2);
-  const e=ang<.5?4*ang*ang*ang:1-Math.pow(-2*ang+2,3)/2;
-  hinge.rotation.x=-THREE.MathUtils.degToRad(105)*e;
-  ctl.target.y=35+70*e;
-  ctl.update();renderer.render(scene,cam);
-});
+function renderScene(){
+  renderQueued=false;
+  renderer.clear();renderer.render(scene,cam);
+  if(cardsOn){renderer.clearDepth();renderer.render(ov,ovCam)}
+}
 </script>
 </body>
 </html>
