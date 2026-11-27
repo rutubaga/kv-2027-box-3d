@@ -94,8 +94,8 @@ const saturate=m=>{m.onBeforeCompile=s=>{s.fragmentShader=s.fragmentShader.repla
   float l=dot(diffuseColor.rgb,vec3(.2126,.7152,.0722));
   diffuseColor.rgb=clamp(mix(vec3(l),diffuseColor.rgb,${SAT.toFixed(2)}),0.,1.);`)};return m};
 /* снаружи 3275:12680 (без паттерна в карманах); внутри: 1 — 3259:26481 крупный паттерн, 2 — 3330:14677 мелкий паттерн 60% */
-const OUT=tex('outer3.jpg?rev=f740fcd3f861');
-const INN=tex('inner4.jpg?rev=0b3c7cb7ab87'); /* мелкий паттерн 60%, как в печати */
+const OUT=tex('outer5.jpg?rev=84a0c5e88023'); /* текущая печать: штамп на магнитах, бумаги 8 и 4–5 */
+const INN=tex('inner5.jpg?rev=57586a3b3846'); /* текущая печать: бумага 10 + полоса 40 мм над ложементом */
 const mOut=saturate(new THREE.MeshStandardMaterial({map:OUT,roughness:.85,metalness:0}));
 const mIn=saturate(new THREE.MeshStandardMaterial({map:INN,roughness:.9,metalness:0}));
 const mEdge=new THREE.MeshStandardMaterial({color:EDGE,roughness:.95});
@@ -374,10 +374,28 @@ panel(hinge,[[x0,0,D+2*T],[x0,-FLAP-T,D+2*T],[x1,-FLAP-T,D+2*T],[x1,0,D+2*T]],
 /* Коробка постоянно открыта, камера неподвижна. */
 hinge.rotation.x=-THREE.MathUtils.degToRad(105);
 const boxBounds=new THREE.Box3().setFromObject(box), boxCenter=boxBounds.getCenter(new THREE.Vector3());
+/* Вращение: тянуть мышью — повернуть, колесо — приблизить, двойной щелчок — исходный вид. */
+const view={yaw:0,pitch:0,zoom:1};let lastCardsTop=innerHeight;
+{
+  const el=renderer.domElement;el.style.touchAction='none';el.style.cursor='grab';
+  let drag=null;
+  el.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY};el.setPointerCapture(e.pointerId);el.style.cursor='grabbing'});
+  el.addEventListener('pointermove',e=>{if(!drag)return;
+    view.yaw-=(e.clientX-drag.x)*.008;view.pitch=THREE.MathUtils.clamp(view.pitch+(e.clientY-drag.y)*.006,-1.2,1);
+    drag={x:e.clientX,y:e.clientY};layoutBox(lastCardsTop);invalidate()});
+  const end=()=>{drag=null;el.style.cursor='grab'};
+  el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);
+  el.addEventListener('wheel',e=>{e.preventDefault();view.zoom=THREE.MathUtils.clamp(view.zoom*Math.exp(e.deltaY*.0012),.35,2.5);layoutBox(lastCardsTop);invalidate()},{passive:false});
+  el.addEventListener('dblclick',()=>{view.yaw=view.pitch=0;view.zoom=1;layoutBox(lastCardsTop);invalidate()});
+}
 function layoutBox(cardsTop){
   // Открытая коробка остаётся фоном за крупными открытками, ракурс не вращается.
   const w=innerWidth,h=innerHeight,areaH=Math.max(60,cardsTop-12),pad=16;
-  const direction=new THREE.Vector3(310,815,920).normalize();
+  lastCardsTop=cardsTop;
+  const direction=new THREE.Vector3(310,815,920).normalize().applyAxisAngle(new THREE.Vector3(0,1,0),view.yaw);
+  {const r=new THREE.Vector3().crossVectors(new THREE.Vector3(0,1,0),direction).normalize();
+   const el=Math.asin(direction.y), target=THREE.MathUtils.clamp(el+view.pitch,THREE.MathUtils.degToRad(4),THREE.MathUtils.degToRad(88));
+   direction.applyAxisAngle(r,el-target).normalize();}
   const right=new THREE.Vector3().crossVectors(new THREE.Vector3(0,1,0),direction).normalize();
   const up=new THREE.Vector3().crossVectors(direction,right);
   const tangent=Math.tan(THREE.MathUtils.degToRad(cam.fov/2));
@@ -386,7 +404,7 @@ function layoutBox(cardsTop){
     const v=new THREE.Vector3(x,y,z).sub(boxCenter),depth=v.dot(direction);
     distance=Math.max(distance,depth+Math.abs(v.dot(right))/(tangent*Math.max(1,w-2*pad)/h),depth+Math.abs(v.dot(up))/(tangent*Math.max(1,areaH-2*pad)/h));
   }
-  cam.position.copy(boxCenter).addScaledVector(direction,distance);
+  cam.position.copy(boxCenter).addScaledVector(direction,distance*view.zoom);
   cam.lookAt(boxCenter);cam.setViewOffset(w,h,0,(h-areaH)/2,w,h);
 }
 
