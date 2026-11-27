@@ -95,7 +95,7 @@ const saturate=m=>{m.onBeforeCompile=s=>{s.fragmentShader=s.fragmentShader.repla
   diffuseColor.rgb=clamp(mix(vec3(l),diffuseColor.rgb,${SAT.toFixed(2)}),0.,1.);`)};return m};
 /* снаружи 3275:12680 (без паттерна в карманах); внутри: 1 — 3259:26481 крупный паттерн, 2 — 3330:14677 мелкий паттерн 60% */
 const OUT=tex('outer5.jpg?rev=84a0c5e88023'); /* текущая печать: штамп на магнитах, бумаги 8 и 4–5 */
-const INN=tex('inner5.jpg?rev=57586a3b3846'); /* текущая печать: бумага 10 + полоса 40 мм над ложементом */
+const INN=tex('inner5.jpg?rev=1edb65029462'); /* текущая печать: бумага 10 + полоса 40 мм над ложементом */
 const mOut=saturate(new THREE.MeshStandardMaterial({map:OUT,roughness:.85,metalness:0}));
 const mIn=saturate(new THREE.MeshStandardMaterial({map:INN,roughness:.9,metalness:0}));
 const mEdge=new THREE.MeshStandardMaterial({color:EDGE,roughness:.95});
